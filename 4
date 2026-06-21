@@ -1,0 +1,52 @@
+/*
+Задача 4. Эмуляция tail -f
+
+Алгоритм:
+1. Открывает файл для чтения (O_RDONLY).
+2. С помощью lseek() перемещает указатель в конец файла.
+3. В бесконечном цикле пытается читать данные из файла.
+4. Если read() вернул > 0 — выводит прочитанное.
+5. Если вернул 0 — ждёт 1 секунду и пробует снова.
+*/
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s filename\n", argv[0]);
+        exit(1);
+    }
+
+    int fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        perror("open");
+        exit(1);
+    }
+
+    if (lseek(fd, 0, SEEK_END) == -1) {
+        perror("lseek");
+        close(fd);
+        exit(1);
+    }
+
+    char buf[1024];
+    while (1) {
+        ssize_t n = read(fd, buf, sizeof(buf));
+        if (n == -1) {
+            perror("read");
+            break;
+        } else if (n > 0) {
+            write(1, buf, n);
+        } else {
+            sleep(1);
+        }
+    }
+
+    close(fd);
+    return 0;
+}
