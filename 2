@@ -1,0 +1,83 @@
+/*
+Задача 2. Чтение "дырки"
+
+Задание:
+1. Создайте файл sparse.dat с помощью open() и write():
+   - Запишите в него строку "START" (5 байт) в начало.
+   - С помощью lseek() переместите указатель на позицию 1 000 000.
+   - Запишите строку "END" (3 байта).
+2. Закройте файл.
+3. Затем откройте этот файл для чтения и прочитайте первые 20 байт от начала, используя read().
+4. Выведите размер файла через stat() и сравните с реальным местом на диске.
+*/
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+int main() {
+    int fd = open("sparse.dat", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        perror("open");
+        exit(1);
+    }
+
+    if (write(fd, "START", 5) != 5) {
+        perror("write START");
+        close(fd);
+        exit(1);
+    }
+
+    if (lseek(fd, 1000000, SEEK_SET) == -1) {
+        perror("lseek");
+        close(fd);
+        exit(1);
+    }
+
+    if (write(fd, "END", 3) != 3) {
+        perror("write END");
+        close(fd);
+        exit(1);
+    }
+
+    close(fd);
+
+    fd = open("sparse.dat", O_RDONLY);
+    if (fd == -1) {
+        perror("open for reading");
+        exit(1);
+    }
+
+    char buf[20];
+    ssize_t n = read(fd, buf, 20);
+    if (n == -1) {
+        perror("read");
+        close(fd);
+        exit(1);
+    }
+
+    printf("First 20 bytes: ");
+    for (int i = 0; i < n; i++) {
+        if (buf[i] >= 32 && buf[i] <= 126) {
+            printf("%c", buf[i]);
+        } else {
+            printf(".");
+        }
+    }
+    printf("\n");
+
+    close(fd);
+
+    struct stat st;
+    if (stat("sparse.dat", &st) == -1) {
+        perror("stat");
+        exit(1);
+    }
+    printf("File size: %ld bytes\n", st.st_size);
+
+    return 0;
+}
