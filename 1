@@ -1,0 +1,71 @@
+/*
+Задача 1. Безопасное копирование
+
+Условия:
+- Имена исходного и целевого файлов передаются как аргументы командной строки (argv[1] и argv[2]).
+- Если целевой файл уже существует, программа запрашивает подтверждение у пользователя перед перезаписью.
+- Используется буфер размером 4096 байт для чтения/записи.
+- Обрабатываются все возможные ошибки (perror()).
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s source destination\n", argv[0]);
+        exit(1);
+    }
+
+    int src = open(argv[1], O_RDONLY);
+    if (src == -1) {
+        perror("open source");
+        exit(1);
+    }
+
+    int dst = open(argv[2], O_WRONLY | O_CREAT | O_EXCL, 0644);
+    if (dst == -1) {
+        if (errno == EEXIST) {
+            printf("File exists. Overwrite? (y/n): ");
+            char answer;
+            scanf(" %c", &answer);
+            if (answer != 'y' && answer != 'Y') {
+                close(src);
+                exit(0);
+            }
+            dst = open(argv[2], O_WRONLY | O_TRUNC);
+            if (dst == -1) {
+                perror("open destination");
+                close(src);
+                exit(1);
+            }
+        } else {
+            perror("open destination");
+            close(src);
+            exit(1);
+        }
+    }
+
+    char buf[4096];
+    ssize_t n;
+    while ((n = read(src, buf, sizeof(buf))) > 0) {
+        if (write(dst, buf, n) != n) {
+            perror("write");
+            close(src);
+            close(dst);
+            exit(1);
+        }
+    }
+    if (n == -1) {
+        perror("read");
+    }
+
+    close(src);
+    close(dst);
+    return 0;
+}
