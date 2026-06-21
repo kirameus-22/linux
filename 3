@@ -1,0 +1,58 @@
+/*
+Задача 3. Одновременная запись
+
+Задание:
+- Родительский процесс записывает в файл 100 раз строку "Parent: PID=...\n".
+- Дочерний процесс записывает в файл 100 раз строку "Child: PID=...\n".
+- Используется wait() в родителе.
+- Файл открывается с флагом O_APPEND.
+*/
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main() {
+    int fd = open("append.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd == -1) {
+        perror("open");
+        exit(1);
+    }
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        close(fd);
+        exit(1);
+    }
+
+    if (pid == 0) {
+        for (int i = 0; i < 100; i++) {
+            char buf[64];
+            int len = snprintf(buf, sizeof(buf), "Child: PID=%d\n", getpid());
+            if (write(fd, buf, len) != len) {
+                perror("child write");
+                break;
+            }
+        }
+        close(fd);
+        exit(0);
+    } else {
+        for (int i = 0; i < 100; i++) {
+            char buf[64];
+            int len = snprintf(buf, sizeof(buf), "Parent: PID=%d\n", getpid());
+            if (write(fd, buf, len) != len) {
+                perror("parent write");
+                break;
+            }
+        }
+        close(fd);
+        wait(NULL);
+    }
+
+    return 0;
+}
